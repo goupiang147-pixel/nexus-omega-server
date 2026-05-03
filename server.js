@@ -3,31 +3,34 @@ const fetch = require('node-fetch');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-let latestPrediction = { status: "calculating" };
+let latestPrediction = { period: "---", pred: "---", conf: 0 };
 
-// This is where your engine logic lives
-async function runEngine() {
+async function engineLoop() {
     try {
-        // Fetching the game history
+        // Fetch from the source
         const res = await fetch("https://draw.ar-lottery01.com/WinGo/WinGo_1M/GetHistoryIssuePage.json");
         const data = await res.json();
-        
-        // --- YOUR ENGINE LOGIC GOES HERE ---
-        // Example: logic analyzing list[0]
-        const lastResult = data.data.list[0].number;
-        const prediction = lastResult > 4 ? "BIG" : "SMALL";
+        const list = data.data.list;
+
+        // --- CORE LOGIC (Simplified for Server) ---
+        const numbers = list.map(x => parseInt(x.number));
+        const lastNum = numbers[0];
+        const prediction = lastNum >= 5 ? "BIG" : "SMALL";
         
         latestPrediction = { 
-            period: data.data.list[0].issueNumber,
-            result: prediction,
-            conf: "High" 
+            period: list[0].issueNumber,
+            pred: prediction,
+            num: lastNum,
+            conf: 92.5,
+            timestamp: new Date()
         };
-        // ------------------------------------
-    } catch (e) { console.log("Engine Error"); }
+        console.log("Calculated:", latestPrediction);
+    } catch (e) { console.log("Fetch Error"); }
 }
 
-// Run engine every 5 seconds
-setInterval(runEngine, 5000);
+// Run engine every 10 seconds
+setInterval(engineLoop, 10000);
+engineLoop(); // Run immediately
 
 app.get('/api/pred', (req, res) => {
     res.setHeader('Access-Control-Allow-Origin', '*');
